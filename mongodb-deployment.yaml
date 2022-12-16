@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service 
+  namespace: exam
+  labels:
+    app: mongodb-service 
+    tier: exam
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:       
+    app: mongodb
+    tier: database
+  clusterIP: None  
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodbvolume
+  namespace: exam
+  labels:
+    app: mongodb
+    tier: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: exam
+  labels:
+    app: mongodb
+    tier: database
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+      tier: database
+  strategy:
+    type: Recreate
+  replicas: 2  
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        tier: database
+    spec:
+      
+      containers:
+      - image: mongo # image from docker-hub
+        
+        name: mongodb
+        env:
+        - name: mongo_USER # Setting USER username on mysql From a 'Secret'
+          valueFrom:
+            secretKeyRef:
+              name: mongo-credentials 
+              key: username
+        - name: mongo_PASSWORD # Setting USER Password on mysql From a 'Secret'
+          valueFrom:
+            secretKeyRef:
+              name: mongo-credentials 
+              key: password
+        - name: mongodb_DATABASE # Setting Database Name from a 'ConfigMap'
+          valueFrom:
+            configMapKeyRef:
+              name: mongo-conf
+              key: name
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        volumeMounts:        # Mounting voulume obtained from Persistent Volume Claim
+        - name: mongodbvolume-storage
+          mountPath: /var/lib/mongodb
+      volumes:
+      - name: mongodbvolume-storage # Obtaining 'vloume' from PVC
+        persistentVolumeClaim:
+          claimName: mongodbvolume

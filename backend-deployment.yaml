@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:  # backend application pod lables should match these
+    app: app-backend
+    tier: backend
+  ports:
+  - protocol: "TCP"
+    port: 5000
+    targetPort: 5000
+  type: NodePort   # use NodePort, if you are not running Kubernetes on cloud
+---
+# Configure 'Deployment' of backend application
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-backend
+  labels: 
+    app: app-backend
+    tier: backend
+spec:
+  replicas: 2    # Number of replicas of back-end application to be deployed
+  selector:
+    matchLabels: # backend application pod labels should match these
+      app: app-backend
+      tier: backend
+  template:
+    metadata:
+      labels: # Must macth 'Service' and 'Deployment' labels
+        app: app-backend
+        tier: backend  
+    spec:                 
+      containers: 
+      - name: backend 
+        image: abirhsaini/exam:nodedocker  
+        env:   
+          - name: DB_HOST   # Setting Database host address from configMap
+            valueFrom: 
+              configMapKeyRef:
+                name: mongo-conf   # name of configMap
+                key: host
+          - name: mongodb_DATABASE  # Setting Database name from configMap
+            valueFrom:
+              configMapKeyRef:
+                name: mongo-conf  
+                key: name
+          - name: mongo_USER  # Setting Database username from Secret
+            valueFrom:
+              secretKeyRef:
+                name: mongo-credentials # Secret Name
+                key: username
+          - name: mongo_PASSWORD # Setting Database password from Secret
+            valueFrom:
+              secretKeyRef:
+                name: mongo-credentials
+                key: password     
+        ports:
+        - containerPort: 5000
+
+        # livenessProbe:
+        #   httpGet:
+        #     port: 5000
+        #     path: /health
+        #   initialDelaySeconds: 40
+        #   timeoutSeconds: 50
+        # readinessProbe:
+        #   httpGet:
+        #     port: 5000
+        #     path: /ready
+        #   initialDelaySeconds: 20
+        #   timeoutSeconds: 50
+        # startupProbe:
+        #   httpGet:
+        #     path: /startup
+        #     port: 5000
+        #   initialDelaySeconds: 40
+        #   timeoutSeconds: 50
+    

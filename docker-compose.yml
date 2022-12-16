@@ -1,0 +1,28 @@
+version: "3.7"
+services:
+  mongo:
+    image: mongo
+    volumes:
+      - mongoVolume:/data/configdb/data/db/mongodb
+    container_name: mongodb-service
+
+  server:   
+    image: localhost:8000/nodedocker
+    container_name: backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+  
+  
+  client:
+    image: localhost:8000/nodefrontend
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - server   
+  
+volumes:
+  mongoVolume:
+    driver: local
